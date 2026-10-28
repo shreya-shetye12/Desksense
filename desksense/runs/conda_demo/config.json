@@ -1,0 +1,71 @@
+{
+  "model": "videomae",
+  "mode": "head",
+  "seed": 42,
+  "synthetic": false,
+  "manifest_sha256": "28b1ac079b8909d11738efd6f9a9fff9fcc0c7b994793e1d5b655248f326d56d",
+  "manifest": "/Users/shreyashetye/Documents/Codex/2026-10-22/thi/work/real-pilot/manifest.csv",
+  "device": "cpu",
+  "torch_version": "2.14.1",
+  "epochs": 100,
+  "feature_policy": "Frozen deterministic full-clip features; no training augmentation",
+  "trainable_parameters": 7688,
+  "total_parameters": 86233352,
+  "pilot": true,
+  "predeclared_plan": {
+    "status": "Plan fixed before any test metrics",
+    "dataset": "Something-Something V2, bounded archive-prefix pilot",
+    "videos": 716,
+    "counts": {
+      "train": 487,
+      "val": 122,
+      "test": 107
+    },
+    "classes": [
+      "Picking something up",
+      "Pretending to pick something up",
+      "Putting something on a surface",
+      "Pretending to put something on a surface",
+      "Opening something",
+      "Pretending to open something without actually opening it",
+      "Closing something",
+      "Pretending to close something without actually closing it"
+    ],
+    "acquisition_compressed_bytes": 1500000000,
+    "source": "https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Something-Something-V2/20bn-something-something-v2-00",
+    "selection": "First available clips per class/official partition in bounded archive prefix; exploratory, not representative full benchmark",
+    "split_seed": 2026,
+    "manifest_sha256": "28b1ac079b8909d11738efd6f9a9fff9fcc0c7b994793e1d5b655248f326d56d",
+    "models": [
+      "frame_mean frozen ResNet18/ImageNet",
+      "videomae frozen Kinetics-400 pretraining"
+    ],
+    "training": "Cached deterministic whole-clip features; train linear head (+ token-mean LayerNorm for VideoMAE); no augmentation or backbone fine-tuning",
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "epochs": 100,
+    "patience": 20,
+    "batch_size": 64,
+    "lr": 0.001,
+    "weight_decay": 0.05,
+    "label_smoothing": 0.1,
+    "selection_metric": "validation macro-F1",
+    "calibration": "temperature and reject threshold on val only",
+    "test_diagnostics": [
+      "none",
+      "shuffle",
+      "reverse",
+      "repeat"
+    ],
+    "bootstrap_repetitions": 1000,
+    "limitations": [
+      "Small nonrandom archive-prefix subset",
+      "No actor IDs; source clips disjoint only",
+      "CPU-only frozen-backbone pilot; not final fine-tuned benchmark",
+      "Model architectures and pretraining differ"
+    ]
+  }
+}

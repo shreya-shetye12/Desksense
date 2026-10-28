@@ -1,0 +1,23 @@
+Metadata-Version: 2.4
+Name: desksense
+Version: 0.1.0
+Summary: Reproducible video interaction recognition and evaluation
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: torch<3,>=2.4
+Requires-Dist: torchvision<1,>=0.19
+Requires-Dist: transformers<5,>=4.46
+Requires-Dist: opencv-python-headless<5,>=4.10
+Requires-Dist: scikit-learn<2,>=1.5
+Requires-Dist: matplotlib<4,>=3.9
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn<1,>=0.30
+Requires-Dist: python-multipart<1,>=0.0.18
+Requires-Dist: safetensors<1,>=0.4
+Requires-Dist: requests<3,>=2.32
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: httpx<1,>=0.27; extra == "dev"
+Requires-Dist: ruff<1,>=0.9; extra == "dev"
+Dynamic: license-file

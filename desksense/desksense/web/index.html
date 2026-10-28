@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f7">
+  <title>DeskSense — Video Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23133832'/%3E%3Cpath d='M11 11h7v7h-7zm11 0h7v7h-7zm-11 11h7v7h-7zm11 0h7v7h-7z' fill='%23bef264'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to analysis</a>
+  <div class="shell">
+    <main id="main">
+      <header class="page-heading">
+        <div><h1>DeskSense <span>— Video Analyzer</span></h1><p>Classify human–object interactions and inspect predictions over time.</p></div>
+        <nav class="header-tools" aria-label="Application links"><span id="connectionStatus" class="connection"><i></i>Connecting</span><a class="text-link" href="/docs" target="_blank" rel="noopener">API docs</a></nav>
+      </header>
+      <div id="message" class="message" role="status" hidden></div>
+      <div class="workspace-grid">
+        <div class="main-column">
+          <section class="panel source-panel" aria-labelledby="sourceHeading">
+            <div class="panel-heading"><div class="panel-title"><h2 id="sourceHeading">Source video</h2></div><div class="source-actions"><button class="quiet-button" id="sampleButton" hidden>Load sample video</button><button class="quiet-button" id="replaceButton" hidden>Replace video</button><span class="small-tag" id="sourceTag">No video selected</span></div></div>
+            <input type="file" id="fileInput" accept="video/*,.mp4,.mov,.webm,.m4v,.avi" hidden>
+            <div class="drop-zone" id="dropZone">
+              <h3>Upload a video</h3><p>Drag a file here or select one from your computer.</p>
+              <button class="choose-button" id="chooseButton"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V3m-4 4 4-4 4 4M4 13v4h12v-4"/></svg>Choose a video</button>
+              <span class="format-note">MP4, MOV or WebM · Maximum 100 MiB, 2 minutes</span>
+            </div>
+            <div class="video-stage" id="videoStage" hidden>
+              <video id="video" controls playsinline preload="metadata" aria-label="Uploaded video preview"></video>
+              <div class="video-overlay" id="videoOverlay" hidden><span class="overlay-dot"></span><span id="overlayLabel">Waiting for prediction</span><span id="overlayScore"></span></div>
+            </div>
+            <div class="file-info" id="fileInfo" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2h7l4 4v12H5zM12 2v5h4"/></svg><span id="fileName"></span><span id="fileSize"></span><span class="file-info-spacer"></span><span id="videoDuration">Reading video…</span></div>
+          </section>
+          <section class="panel timeline-panel" aria-labelledby="timelineHeading">
+            <div class="panel-heading"><div class="panel-title"><h2 id="timelineHeading">Confidence over time</h2></div><label class="raw-toggle"><input type="checkbox" id="showRaw">Show raw scores</label></div>
+            <div class="chart-intro"><span>Top-class model score</span><span class="chart-legend"><i class="legend-line"></i>Smoothed<span id="rawLegend" hidden><i class="legend-line dashed"></i>Raw</span></span></div>
+            <div class="chart-wrap" id="chartWrap"><svg id="confidenceChart" viewBox="0 0 900 175" role="img" aria-labelledby="chartTitle chartDescription"><title id="chartTitle">Model confidence timeline</title><desc id="chartDescription">Analyze a video to see model scores over time.</desc></svg><div class="chart-empty" id="chartEmpty"><span>Run analysis to view model scores over time.</span></div></div>
+            <div class="action-track" id="actionTrack" aria-label="Predicted action timeline"></div><div class="track-legend" id="trackLegend"></div>
+            <div class="chart-footnote"><span class="footnote-dot"></span><span id="chartFootnote">Analyze your clip, then click the timeline to explore. Scores are not verified probabilities of correctness.</span></div>
+          </section>
+          <section class="panel results-panel" id="resultsPanel" aria-labelledby="resultsHeading" hidden>
+            <div class="panel-heading"><div class="panel-title"><h2 id="resultsHeading">Window-level predictions</h2><span class="count-badge" id="resultCount"></span></div><a class="quiet-button" id="exportButton" href="#" download>Export JSON</a></div>
+            <div class="table-scroll"><table><thead><tr><th>VIDEO WINDOW</th><th>SMOOTHED PREDICTION</th><th>MODEL SCORE</th><th class="raw-column">RAW PREDICTION</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+          </section>
+        </div>
+        <aside class="inspector-column">
+          <section class="inspector-section settings-panel" aria-labelledby="settingsHeading"><div class="panel-heading"><div class="panel-title"><h2 id="settingsHeading">Settings</h2></div></div>
+            <div class="model-card"><div><strong id="modelName">Video classifier</strong><span id="modelDetails">Connecting to local model…</span></div><span id="deviceBadge" class="device-badge">—</span></div>
+            <fieldset id="settingsFields"><legend class="sr-only">Inference settings</legend><div class="setting-row"><label for="windowInput">Window length<span>Video context per prediction</span></label><div class="number-unit"><input id="windowInput" type="number" min="0.25" max="30" step="0.25" value="2" inputmode="decimal"><span>s</span></div></div>
+            <div class="setting-row"><label for="strideInput">Window stride<span>Time between predictions</span></label><div class="number-unit"><input id="strideInput" type="number" min="0.25" max="30" step="0.25" value="0.5" inputmode="decimal"><span>s</span></div></div>
+            <div class="smoothing-setting"><div class="smoothing-label"><label for="alphaInput">Temporal smoothing</label><output for="alphaInput" id="alphaValue">0.50</output></div><input id="alphaInput" type="range" min="0.1" max="1" step="0.05" value="0.5"><div class="range-labels"><span>Smoother</span><span>More responsive</span></div></div></fieldset>
+            <button id="analyzeButton" class="analyze-button" disabled><span id="analyzeIcon" class="analyze-icon" aria-hidden="true">↗</span><span id="analyzeText">Analyze video</span></button>
+            <div class="processing-status" id="processingStatus" role="status" hidden><div class="processing-bar"></div><span id="processingText">Uploading & analyzing…</span><span id="processingTimer">0s</span></div>
+            <p class="setup-note" id="setupNote">Choose a video to start your analysis.</p>
+          </section>
+          <section class="inspector-section prediction-panel" aria-labelledby="predictionHeading"><div class="panel-heading"><div class="panel-title"><h2 id="predictionHeading">At the playhead</h2></div><span class="playhead-time" id="playheadTime">00:00.0</span></div>
+            <div class="prediction-empty" id="predictionEmpty"><p id="predictionEmptyText">The current action will appear here as you explore your results.</p></div>
+            <div id="currentPrediction" hidden><div class="prediction-mode"><span class="prediction-color" id="predictionColor"></span>Smoothed prediction</div><h3 id="predictionLabel"></h3><div class="score-row"><span>Model score</span><strong id="predictionScore"></strong></div><div class="score-meter"><span id="scoreMeter"></span></div><div class="raw-summary" id="rawSummary"></div><div class="rankings-heading">Other scores</div><div id="classRankings"></div><p class="rejection-note" id="rejectionNote"></p></div>
+          </section>
+          <section class="session-summary" id="sessionSummary" hidden><div><span>Analyzed windows</span><strong id="summaryWindows">—</strong></div><div><span>Request elapsed</span><strong id="summaryElapsed">—</strong></div><div><span>Video duration</span><strong id="summaryDuration">—</strong></div></section>
+          <div class="context-note"><span class="context-note-icon" aria-hidden="true">i</span><p>This model recognizes a fixed set of interactions. Review predictions in context; visual confidence alone does not establish correctness.</p></div>
+        </aside>
+      </div>
+      <footer class="footer">DeskSense · Video interaction classification</footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

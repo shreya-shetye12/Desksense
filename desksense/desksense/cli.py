@@ -1,0 +1,130 @@
+import argparse
+import importlib
+
+
+def execute(module, function):
+    def run(args):
+        return getattr(importlib.import_module(f"desksense.{module}"), function)(args)
+    return run
+
+
+def main():
+    parser = argparse.ArgumentParser(description="DeskSense: reproducible video understanding")
+    commands = parser.add_subparsers(dest="command", required=True)
+    def command(name, module, function, help_text):
+        p = commands.add_parser(name, help=help_text)
+        p.set_defaults(func=execute(module, function))
+        return p
+    p = command("prepare", "prepare", "prepare_ssv2", "Import local Something-Something V2 files")
+    p.add_argument("--videos", required=True)
+    p.add_argument("--train-json", required=True)
+    p.add_argument("--val-json", required=True)
+    p.add_argument("--classes", default="configs/classes.json")
+    p.add_argument("--out", default="data/manifest.csv")
+    p.add_argument("--seed", type=int, default=2026)
+    p.add_argument("--val-fraction", type=float, default=.2)
+    p.add_argument("--max-per-class", type=int, default=0, help="0=all available; nonzero defines a disclosed subset")
+    p.add_argument("--allow-missing", action="store_true")
+    p = command("audit", "workflows", "audit_command", "Check split and exact duplicate leakage")
+    p.add_argument("--manifest", default="data/manifest.csv")
+    p.add_argument("--classes", default="configs/classes.json")
+    p.add_argument("--out", default="data/audit.json")
+    p = command("train", "train", "train", "Train on train; early-stop using validation macro-F1")
+    p.add_argument("--manifest", default="data/manifest.csv")
+    p.add_argument("--classes", default="configs/classes.json")
+    p.add_argument("--model", choices=["videomae", "frame_mean", "tiny"], default="videomae")
+    p.add_argument("--mode", choices=["head", "partial", "full"], default="partial")
+    p.add_argument("--checkpoint", default="MCG-NJU/videomae-base")
+    p.add_argument("--revision", default="main")
+    p.add_argument("--out", required=True)
+    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--epochs", type=int, default=15)
+    p.add_argument("--batch-size", type=int, default=2)
+    p.add_argument("--accumulate", type=int, default=4)
+    p.add_argument("--workers", type=int, default=0)
+    p.add_argument("--views", type=int, default=1)
+    p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--weight-decay", type=float, default=.05)
+    p.add_argument("--label-smoothing", type=float, default=.1)
+    p.add_argument("--patience", type=int, default=5)
+    for name, function in (("calibrate", "calibrate"), ("evaluate", "evaluate")):
+        p = command(name, "evaluate", function, "Validation calibration" if name == "calibrate" else "Held-out clip evaluation")
+        p.add_argument("--run", required=True)
+        p.add_argument("--manifest", default="data/manifest.csv")
+        p.add_argument("--device", default="auto")
+        p.add_argument("--batch-size", type=int, default=2)
+        p.add_argument("--workers", type=int, default=0)
+        p.add_argument("--views", type=int, default=1)
+        if name == "calibrate":
+            p.add_argument("--target-accuracy", type=float, default=.85)
+            p.add_argument("--min-coverage", type=float, default=.25)
+        else:
+            p.add_argument("--perturb", choices=["none", "reverse", "shuffle", "repeat"], default="none")
+            p.add_argument("--bootstrap", type=int, default=1000)
+            p.add_argument("--external", action="store_true", help="Evaluate separate external test manifest")
+            p.add_argument("--out")
+    p = command("infer", "inference", "infer", "Causal sliding-window prediction")
+    p.add_argument("--run", required=True)
+    p.add_argument("--video", required=True)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--window", type=float, default=2.)
+    p.add_argument("--stride", type=float, default=.5)
+    p.add_argument("--alpha", type=float, default=.5)
+    p.add_argument("--out", default="runs/predictions.json")
+    p = command("benchmark", "inference", "benchmark", "Synchronized batch-one model and pipeline latency")
+    p.add_argument("--run", required=True)
+    p.add_argument("--video", required=True)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--warmup", type=int, default=5)
+    p.add_argument("--repeats", type=int, default=30)
+    p.add_argument("--out")
+    p = command("stream-eval", "stream_eval", "stream_evaluate", "Evaluate smoothing on continuous annotations")
+    p.add_argument("--run", required=True)
+    p.add_argument("--annotations", required=True)
+    p.add_argument("--split", choices=["val", "test"], required=True)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--window", type=float, default=2.)
+    p.add_argument("--stride", type=float, default=.5)
+    p.add_argument("--alpha", type=float, default=.5)
+    p.add_argument("--bootstrap", type=int, default=1000)
+    p.add_argument("--out", required=True)
+    p = command("compare", "report", "compare", "Paired group-bootstrap macro-F1 difference")
+    p.add_argument("--a", required=True, help="First predictions.jsonl")
+    p.add_argument("--b", required=True, help="Second predictions.jsonl")
+    p.add_argument("--bootstrap", type=int, default=1000)
+    p.add_argument("--out", default="runs/comparison.json")
+    p = command("report", "report", "report", "Self-contained HTML, CSV and Markdown from measured results")
+    p.add_argument("--runs", default="runs")
+    p.add_argument("--out", default="runs/report")
+    p = command("suite", "workflows", "suite", "Run predeclared baseline/VideoMAE experiments and ablations")
+    p.add_argument("--manifest", default="data/manifest.csv")
+    p.add_argument("--classes", default="configs/classes.json")
+    p.add_argument("--out", default="runs/suite")
+    p.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])
+    p.add_argument("--epochs", type=int, default=15)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--batch-size", type=int, default=2)
+    p.add_argument("--bootstrap", type=int, default=1000)
+    p.add_argument("--resume", action="store_true", help="Skip completed runs only if configuration matches")
+    p = command("smoke", "workflows", "smoke", "Synthetic end-to-end software test; not real model results")
+    p.add_argument("--out", default="runs/synthetic_smoke")
+    args = parser.parse_args()
+    for key in ("epochs", "batch_size", "accumulate", "views", "patience", "bootstrap", "repeats"):
+        if hasattr(args, key) and getattr(args, key) < 1:
+            parser.error(f"--{key.replace('_', '-')} must be positive")
+    if hasattr(args, "workers") and args.workers < 0:
+        parser.error("--workers must be nonnegative")
+    if hasattr(args, "warmup") and args.warmup < 0:
+        parser.error("--warmup must be nonnegative")
+    if hasattr(args, "val_fraction") and not 0 < args.val_fraction < 1:
+        parser.error("--val-fraction must be between zero and one")
+    if hasattr(args, "max_per_class") and args.max_per_class < 0:
+        parser.error("--max-per-class must be nonnegative")
+    if hasattr(args, "label_smoothing") and not 0 <= args.label_smoothing < 1:
+        parser.error("--label-smoothing must be in [0,1)")
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
